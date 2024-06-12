@@ -26,24 +26,12 @@ jobs:
       - name: distcheck
         run: |
           make -C build distcheck
-
-  build-android:
-    runs-on: ubuntu-latest
-    container: reactnativecommunity/react-native-android:2020-5-20
-    steps:
-      - uses: actions/checkout@v2
-      - name: Envinfo
-        run: npx envinfo
-      - name: Configure android arm64
-        # see build options you can use in https://developer.android.com/ndk/guides/cmake
-        run: |
-          mkdir build
-          cd build
-          $ANDROID_HOME/cmake/3.10.2.4988404/bin/cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/20.0.5594570/build/cmake/android.toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DANDROID_ABI="arm64-v8a" -DANDROID_PLATFORM=android-24 ..
-      - name: Build android arm64
-        run: |
-          $ANDROID_HOME/cmake/3.10.2.4988404/bin/cmake --build build
-          ls -lh build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: libuv-native-linux-build
+          path: build
+          if-no-files-found: error
 
   build-macos:
     runs-on: macos-11
@@ -69,6 +57,12 @@ jobs:
       - name: platform_output_a
         run: |
           ./build/uv_run_tests_a platform_output
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: libuv-native-macos-11-build
+          path: build
+          if-no-files-found: error
       - name: Test
         run: |
           cd build && ctest -V
@@ -79,21 +73,7 @@ jobs:
           mkdir build-auto
           (cd build-auto && ../configure)
           make -C build-auto -j4
-
-  build-ios:
-    runs-on: macos-11
-    steps:
-      - uses: actions/checkout@v2
-      - name: Configure
-        run: |
-          mkdir build-ios
-          cd build-ios
-          cmake .. -GXcode -DCMAKE_SYSTEM_NAME:STRING=iOS -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED:BOOL=NO -DCMAKE_CONFIGURATION_TYPES:STRING=Release
-      - name: Build
-        run: |
-          cmake --build build-ios
-          ls -lh build-ios
-
+          
   build-cross-qemu:
     runs-on: ubuntu-latest
     name: build-cross-qemu-${{ matrix.config.target }}
@@ -143,6 +123,12 @@ jobs:
         run: |
           cmake --build build
           ls -lh build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: libuv-${{ matrix.config.toolchain }}-linux-${{ matrix.config.cc }}-build
+          path: build
+          if-no-files-found: error
       - name: Test
         run: |
           ${{ matrix.config.qemu }} build/uv_run_tests_a
