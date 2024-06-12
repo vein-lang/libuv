@@ -33,6 +33,47 @@ jobs:
           path: build
           if-no-files-found: error
 
+  build-arm-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Envinfo
+        run: npx envinfo
+      - name: Setup
+        run: |
+          brew install ninja automake libtool
+      - name: Configure
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DBUILD_TESTING=ON -G Ninja
+      - name: Build
+        run: |
+          cmake --build build
+          ls -lh
+      - name: platform_output
+        run: |
+          ./build/uv_run_tests platform_output
+      - name: platform_output_a
+        run: |
+          ./build/uv_run_tests_a platform_output
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: libuv-native-macos-arm64-build
+          path: build
+          if-no-files-found: error
+      - name: Test
+        run: |
+          cd build && ctest -V
+      - name: Autotools configure
+        if: always()
+        run: |
+          ./autogen.sh
+          mkdir build-auto
+          (cd build-auto && ../configure)
+          make -C build-auto -j4
+
   build-macos:
     runs-on: macos-11
     steps:
@@ -73,7 +114,9 @@ jobs:
           mkdir build-auto
           (cd build-auto && ../configure)
           make -C build-auto -j4
-          
+
+        
+  
   build-cross-qemu:
     runs-on: ubuntu-latest
     name: build-cross-qemu-${{ matrix.config.target }}
@@ -126,7 +169,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4.3.3
         with:
-          name: libuv-${{ matrix.config.toolchain }}-linux-${{ matrix.config.cc }}-build
+          name: libuv-linux-${{ matrix.config.cc }}-build
           path: build
           if-no-files-found: error
       - name: Test
